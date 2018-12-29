@@ -1,0 +1,67 @@
+<div class='row'>
+  <div class='col-md-6 offset-md-3 bg-white text-dark rounded shadow-lg text-center mb-3'>
+    <h1 class='m-0'>Leave Tracker</h1>
+  </div>
+</div>
+<div class='row'>
+  <div class='col-md-6 offset-md-3 bg-white text-dark rounded shadow-lg p-2'>
+    <h3>People
+      <span class='float-right'>
+        <small>
+          <button type="button" class="btn btn-sm btn-primary" data-toggle="modal" data-target="#newPersonModal">new person</button>
+        </small>
+      </span>
+    </h3>
+    <ul>
+      {{#each people}}
+        <li><a href="/{{this.id}}">{{this.fields.Name}}</a></li>
+      {{/each}}
+    </ul>
+  </div>
+</div>
+
+<div class="modal fade text-dark" id="newPersonModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="exampleModalLabel">new person</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <form action="/form/v1/person/create" method="post">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="person-name" class="col-form-label">name</label>
+            <input type="text" class="form-control" name="personName" id="person-name">
+          </div>
+          <div class="form-group">
+            <label for="annual-salary" class="col-form-label">annual salary</label>
+            <div class="input-group">
+              <div class="input-group-prepend">
+                <div class="input-group-text">$</div>
+              </div>
+              <input type="number" class="form-control" name="annualSalary" id="annual-salary">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="days-on-std" class="col-form-label">number of days on short term disability</label>
+            <input type="number" class="form-control" name="daysOnStd" id="days-on-std" value=60>
+          </div>
+          <div class="form-group">
+            <label for="days-on-pto" class="col-form-label">number of paid time off days</label>
+            <input type="number" class="form-control" name="daysOnPto" id="days-on-pto" value=60>
+          </div>
+          <div class="form-group">
+            <label for="leave-start-date" class="col-form-label">leave start date</label>
+            <input type="date" class="form-control" name="leaveStartDate" id="leave-start-date">
+          </div>
+        </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">close</button>
+        <button type="submit" class="btn btn-primary">create</button>
+      </div>
+      </form>
+    </div>
+  </div>
+</div>

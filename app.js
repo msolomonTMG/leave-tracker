@@ -1,0 +1,158 @@
+const express = require('express')
+const exphbs = require('express-handlebars')
+const bodyParser = require('body-parser')
+const APP_URL = process.env.APP_URL || ''
+const airtable = require('./airtable')
+
+let app = express()
+app.engine('handlebars', exphbs({defaultLayout: 'main'}))
+app.set('view engine', 'handlebars')
+app.use(bodyParser.urlencoded({
+  extended: true
+}))
+app.use(bodyParser.json())
+app.use(express.static(__dirname + '/public'));
+app.set('port', process.env.PORT || 3000)
+
+// create a new event
+app.post('/api/v1/events', async function(req, res) {
+  console.log(req.body)
+})
+
+// update an existing event
+app.post('/api/v1/events/:airtableId', async function(req, res) {
+  console.log(req.body)
+  console.log(req.params.airtableId)
+  let updatedRecord = await airtable.updateRecord('Dates', req.params.airtableId, {
+    'Date': req.body.date
+  })
+  res.send(updatedRecord)
+})
+
+// create a new person
+app.post('/form/v1/person/create', async function(req, res) {
+  // create person
+  const newPerson = await airtable.createRecord('People', {
+    'Name': req.body.personName,
+    'Annual Salary': parseInt(req.body.annualSalary),
+    'Number of Short Term Disability Days': parseInt(req.body.daysOnStd),
+    'Number of PTO Days': parseInt(req.body.daysOnPto),
+    'Leave Start Date': req.body.leaveStartDate
+  })
+  // create days for person
+  const numPflDays = 30
+  let i = 0
+  while (i < numPflDays) {
+    console.log(i)
+    // FMLA runs out in the last two weeks of PFL
+    let protection = 'FMLA'
+    if (i >= 20) {
+      protection = 'PFL'
+    }
+    
+    const newDate = await airtable.createRecord('Dates', {
+      'Name': `PFL${i+1}`,
+      'Type': 'PFL',
+      'Protection': protection,
+      'Person': [newPerson.id]
+    })
+
+    i++
+    
+    if (i === numPflDays) {
+      res.redirect(`/${newPerson.id}`)
+    }
+  }
+})
+
+app.post('/form/v1/person/update', async function(req, res) {
+  const updatedPerson = await airtable.updateRecord('People', req.body.personId, {
+    'Name': req.body.personNanme,
+    'Annual Salary': parseInt(req.body.annualSalary),
+    'Number of Short Term Disability Days': parseInt(req.body.daysOnStd),
+    'Number of PTO Days': parseInt(req.body.daysOnPto),
+    'Leave Start Date': req.body.leaveStartDate
+  })
+  res.redirect(`/${req.body.personId}`)
+})
+
+app.get('/', async function(req, res) {
+  const people = await airtable.getRecordsFromView('People', {
+    view: 'All People',
+    sort: [{field: 'Name', direction: 'asc'}]
+  })
+  res.render('dashboard', {
+    people: people
+  })
+})
+
+app.get('/:personId', async function(req, res) {
+  const person = await airtable.getOneRecord('People', req.params.personId)
+  const holidays = await airtable.getRecordsFromView('Holidays', {
+    view: 'All Holidays'
+  })
+  let airtableLeaveDays = await airtable.getRecordsFromView('Dates', {
+    view: 'All Dates',
+    filterByFormula: `IF({Person} = "${person.get('Name')}", TRUE(), FALSE())`
+  })
+  let unplannedEvents = []
+  let plannedEvents = []
+  let formattedHolidays = []
+  // assemble available days to planned v unplanned
+  for (const leaveDay of airtableLeaveDays) {
+    const newEvent = {
+      airtableId: leaveDay.id,
+      personId: leaveDay.get('Person') ? leaveDay.get('Person')[0] : '',
+      title: leaveDay.get('Name'),
+      start: leaveDay.get('Date String'),
+      startEditable: true,
+      durationEditable: false,
+      color: '#05a3f2'
+    }
+    if (!leaveDay.get('Date String')) {
+      unplannedEvents.push(newEvent)
+    } else {
+      plannedEvents.push(newEvent)
+    }
+  }
+  
+  // format holidays
+  for (const holiday of holidays) {
+    formattedHolidays.push({
+      airtableId: holiday.id,
+      title: holiday.get('Name'),
+      start: holiday.get('Date String'),
+      startEditable: false,
+      durationEditable: false,
+      color: '#D9D9D9'
+    })
+  }
+  
+  res.render('calendar', {
+    encodedJson : encodeURIComponent(JSON.stringify({
+      plannedEvents: plannedEvents,
+      unplannedEvents: unplannedEvents,
+      shortTermDisability: [{
+        title: 'Short Term Disability',
+        start: person.get('Short Term Disability Start Date String'),
+        end: person.get('Short Term Disability End Date String'),
+        durationEditable: false,
+        startEditable: true,
+        personId: person.id,
+        color: '#080f82',
+        textColor: '#ffffff'
+      }],
+      holidays: formattedHolidays,
+      person: person,
+      appUrl: APP_URL
+    })),
+    person: person, // we also use person in the html template
+  })
+})
+
+app.listen(app.get('port'), function() {
+  console.log('Node app is running on port', app.get('port'));
+})
+
+process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = '0'
+module.exports = app

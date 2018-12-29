@@ -1,0 +1,165 @@
+<div class='row'>
+  <div class='col-md-2 bg-white text-dark rounded m-2 p-2 shadow-lg align-middle'>
+    <h4>Leave Tracker</h4>
+  </div>
+  <div class='col-md-9 bg-white text-dark rounded m-2 p-2 shadow-lg'>
+    <button type="button" class="btn btn-danger" onClick="resetPflDates">Reset PFL Dates</button>
+    <button type="button" class="btn btn-outline-warning" data-toggle="modal" data-target="#updatePersonModal">Update Person Info</button>
+  </div>
+</div>
+<div class='row'>
+  <div class='col-md-2 bg-white text-dark rounded m-2 p-2 shadow-lg'>
+    <div id='external-events'>
+      <p>
+        <strong>Available Days Off</strong>
+      </p>
+    </div>
+  </div>
+  <div class='col-md-9 bg-white text-dark rounded m-2 p-2 shadow-lg'>
+    <div id="calendar"></div>
+  </div>
+</div>
+
+<div class="modal fade text-dark" id="updatePersonModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="exampleModalLabel">update person</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <form action="/form/v1/person/update" method="post">
+        <input type="hidden" value="{{{person.id}}}" name="personId" id="person-id">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="person-name" class="col-form-label">name</label>
+            <input type="text" class="form-control" name="personName" id="person-name" value="{{{person.fields.Name}}}">
+          </div>
+          <div class="form-group">
+            <label for="annual-salary" class="col-form-label">annual salary</label>
+            <div class="input-group">
+              <div class="input-group-prepend">
+                <div class="input-group-text">$</div>
+              </div>
+              <input type="number" class="form-control" name="annualSalary" id="annual-salary" value="{{{person.fields.[Annual Salary]}}}">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="days-on-std" class="col-form-label">number of days on short term disability</label>
+            <input type="number" class="form-control" name="daysOnStd" id="days-on-std" value="{{{person.fields.[Number of Short Term Disability Days]}}}">
+          </div>
+          <div class="form-group">
+            <label for="days-on-pto" class="col-form-label">number of paid time off days</label>
+            <input type="number" class="form-control" name="daysOnPto" id="days-on-pto" value="{{{person.fields.[Number of PTO Days]}}}">
+          </div>
+          <div class="form-group">
+            <label for="leave-start-date" class="col-form-label">leave start date</label>
+            <input type="date" class="form-control" name="leaveStartDate" id="leave-start-date" value="{{{person.fields.[Leave Start Date]}}}">
+          </div>
+        </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">close</button>
+        <button type="submit" class="btn btn-primary">update</button>
+      </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<link rel="stylesheet" href="https://fullcalendar.io/releases/fullcalendar/3.9.0/fullcalendar.min.css">
+<script src="https://fullcalendar.io/releases/fullcalendar/3.9.0/lib/moment.min.js"></script>
+<script src="https://fullcalendar.io/releases/fullcalendar/3.9.0/lib/jquery.min.js"></script>
+<script src="https://fullcalendar.io/releases/fullcalendar/3.9.0/fullcalendar.min.js"></script>
+<script src="https://code.jquery.com/ui/1.11.3/jquery-ui.min.js"></script>
+<script>
+// we're given dates from airtable
+let decodedJson = decodeURIComponent("{{{encodedJson}}}")
+let parsedJson = JSON.parse(decodedJson)
+const {plannedEvents, unplannedEvents, shortTermDisability, holidays, appUrl, person} = parsedJson
+const eventsOnCalendar = shortTermDisability.concat(plannedEvents, holidays)
+
+console.log(parsedJson)
+
+function resetPflDates() {
+  
+}
+
+$(function() {
+
+  // initialize the external events
+  // -----------------------------------------------------------------
+
+  // put unplanned events into the external events section
+  unplannedEvents.forEach(unplannedEvent => {
+    console.log(unplannedEvent)
+    $('#external-events').append(`
+      <div class='unplanned-event mb-1 p-1'
+           data-event='{
+             "title":"${unplannedEvent.title}",
+             "airtableId":"${unplannedEvent.airtableId}",
+             "personId":"${unplannedEvent.personId}",
+             "stick":true,
+             "color": "#05a3f2"
+           }'
+      >${unplannedEvent.title}</div>
+    `)
+  })
+
+  $('#external-events .unplanned-event').each(function() {
+
+    // // store data so the calendar knows to render an event upon drop
+    // $(this).data('event', {
+    //   title: $.trim($(this).text()), // use the element's text as the event title
+    //   stick: true // maintain when user navigates (see docs on the renderEvent method)
+    // });
+
+    // make the event draggable using jQuery UI
+    $(this).draggable({
+      zIndex: 999,
+      revert: true,      // will cause the event to go back to its
+      revertDuration: 0  //  original position after the drag
+    });
+
+  });
+
+  // initialize the calendar
+  // -----------------------------------------------------------------
+
+  $('#calendar').fullCalendar({
+    header: {
+      left: 'prev,next today',
+      center: 'title',
+      right: 'month,agendaWeek,agendaDay'
+    },
+    weekends: false,
+    editable: true,
+    droppable: true, // this allows things to be dropped onto the calendar
+    drop (date, jsEvent, ui, resourceId) {
+      //$(this).remove();
+    },
+    // someone changes an events start
+    eventDrop (event, delta, revertFunc, jsEvent, ui, view) {
+      fetch(`${appUrl}/api/v1/events/${event.airtableId}`, {
+        method: 'post',
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({date: event.start})
+      })
+    },
+    // someone drags an unplanned event onto the calendar
+    eventReceive (event) {
+      fetch(`${appUrl}/api/v1/events/${event.airtableId}`, {
+        method: 'post',
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({date: event.start})
+      })
+    },
+    events: eventsOnCalendar
+  });
+
+});
+</script>
