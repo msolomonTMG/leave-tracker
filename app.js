@@ -17,15 +17,36 @@ app.set('port', process.env.PORT || 3000)
 // create a new event
 app.post('/api/v1/events', async function(req, res) {
   console.log(req.body)
+  const newEvent = await airtable.createRecord('Dates', {
+    'Name': req.body.name,
+    'Date': req.body.date,
+    'End': req.body.date,
+    'Person': [req.body.personId]
+  })
+  console.log(newEvent)
+  res.json(newEvent)
+})
+
+// delete an existing event
+app.post('/api/v1/events/delete/:airtableId', async function(req, res) {
+  const deletedRecord = await airtable.deleteRecord('Dates', req.params.airtableId)
+  res.send(deletedRecord)
 })
 
 // update an existing event
 app.post('/api/v1/events/:airtableId', async function(req, res) {
   console.log(req.body)
   console.log(req.params.airtableId)
-  let updatedRecord = await airtable.updateRecord('Dates', req.params.airtableId, {
-    'Date': req.body.date
-  })
+  let updateFields = {}
+  if (req.body.date) {
+    updateFields['Date'] = req.body.date
+  }
+  if (req.body.end) {
+    updateFields['End'] = req.body.end
+  }
+  console.log('updating event')
+  console.log(updateFields)
+  let updatedRecord = await airtable.updateRecord('Dates', req.params.airtableId, updateFields)
   res.send(updatedRecord)
 })
 
@@ -39,30 +60,7 @@ app.post('/form/v1/person/create', async function(req, res) {
     'Number of PTO Days': parseInt(req.body.daysOnPto),
     'Leave Start Date': req.body.leaveStartDate
   })
-  // create days for person
-  const numPflDays = 30
-  let i = 0
-  while (i < numPflDays) {
-    console.log(i)
-    // FMLA runs out in the last two weeks of PFL
-    let protection = 'FMLA'
-    if (i >= 20) {
-      protection = 'PFL'
-    }
-    
-    const newDate = await airtable.createRecord('Dates', {
-      'Name': `PFL${i+1}`,
-      'Type': 'PFL',
-      'Protection': protection,
-      'Person': [newPerson.id]
-    })
-
-    i++
-    
-    if (i === numPflDays) {
-      res.redirect(`/${newPerson.id}`)
-    }
-  }
+  res.redirect(`/${newPerson.id}`)
 })
 
 app.post('/form/v1/person/update', async function(req, res) {
@@ -106,7 +104,7 @@ app.get('/:personId', async function(req, res) {
       title: leaveDay.get('Name'),
       start: leaveDay.get('Date String'),
       startEditable: true,
-      durationEditable: false,
+      durationEditable: true,
       color: '#05a3f2'
     }
     if (!leaveDay.get('Date String')) {

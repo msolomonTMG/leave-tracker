@@ -67,6 +67,28 @@
   </div>
 </div>
 
+<div class="modal fade text-dark" id="deleteEventModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="exampleModalLabel">delete event</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        are you sure you want to delete this?
+        <input type="hidden" name="airtableId" id="delete-event-airtable-id">
+        <input type="hidden" name="fullCalendarId" id="delete-event-full-calendar-id">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">cancel</button>
+        <button type="button" class="btn btn-danger" data-dismiss="modal" onClick="deleteEvent()">delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <link rel="stylesheet" href="https://fullcalendar.io/releases/fullcalendar/3.9.0/fullcalendar.min.css">
 <script src="https://fullcalendar.io/releases/fullcalendar/3.9.0/lib/moment.min.js"></script>
 <script src="https://fullcalendar.io/releases/fullcalendar/3.9.0/lib/jquery.min.js"></script>
@@ -81,14 +103,39 @@ const eventsOnCalendar = shortTermDisability.concat(plannedEvents, holidays)
 
 console.log(parsedJson)
 
-function resetPflDates() {
-  
+function deleteEvent() {
+  const airtableRecordId = $('#delete-event-airtable-id').val()
+  const fullCalendarEventId = $('#delete-event-full-calendar-id').val()
+  console.log(airtableRecordId)
+  console.log(fullCalendarEventId)
+  $('#calendar').fullCalendar('removeEvents', [fullCalendarEventId])
+  fetch(`${appUrl}/api/v1/events/delete/${airtableRecordId}`, {
+    method: 'post',
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      date: event.start,
+      end: event.end
+    })
+  })
 }
 
 $(function() {
 
   // initialize the external events
   // -----------------------------------------------------------------
+
+  $('#external-events').append(`
+    <div class='unplanned-event mb-1 p-1'
+         data-event='{
+           "title":"Full Paycheck PFL",
+           "personId":"${person.id}",
+           "stick":true,
+           "color": "#05a3f2"
+         }'
+    >Full Paycheck PFL</div>
+  `)
 
   // put unplanned events into the external events section
   unplannedEvents.forEach(unplannedEvent => {
@@ -140,22 +187,63 @@ $(function() {
     },
     // someone changes an events start
     eventDrop (event, delta, revertFunc, jsEvent, ui, view) {
+      console.log('EVENT DROP', event)
       fetch(`${appUrl}/api/v1/events/${event.airtableId}`, {
         method: 'post',
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({date: event.start})
+        body: JSON.stringify({
+          date: event.start,
+          end: event.end
+        })
       })
+    },
+    // someone changed the duration of the event
+    eventResize (event, delta, revertFunc, jsEvent, ui, view) {
+      console.log('EVENT RESIZE', event)
+      fetch(`${appUrl}/api/v1/events/${event.airtableId}`, {
+        method: 'post',
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          date: event.start,
+          end: event.end
+        })
+      }).then((response) => {
+        return response.json()
+      }).then((newEvent) => {
+        event.airtableId = newEvent.id
+        $('#calendar').fullCalendar('updateEvent', event)
+      })
+    },
+    // someone clicked on an event
+    eventClick (event, jsEvent, view) {
+      console.log('EVENT CLICK')
+      console.log(event)
+      $('#delete-event-airtable-id').val(event.airtableId)
+      $('#delete-event-full-calendar-id').val(event._id)
+      $('#deleteEventModal').modal()
     },
     // someone drags an unplanned event onto the calendar
     eventReceive (event) {
-      fetch(`${appUrl}/api/v1/events/${event.airtableId}`, {
+      console.log('EVENT RECEIVE', event)
+      fetch(`${appUrl}/api/v1/events`, {
         method: 'post',
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({date: event.start})
+        body: JSON.stringify({
+          date: event.start,
+          personId: event.personId,
+          name: event.title
+        })
+      }).then((response) => {
+        return response.json()
+      }).then((newEvent) => {
+        event.airtableId = newEvent.id
+        $('#calendar').fullCalendar('updateEvent', event)
       })
     },
     events: eventsOnCalendar
