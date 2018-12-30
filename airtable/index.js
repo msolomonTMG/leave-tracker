@@ -43,5 +43,13 @@ module.exports = {
         return resolve(record)
       })
     })
+  },
+  deleteRecord (tableName, recordId) {
+    return new Promise((resolve, reject) => {
+      base(tableName).destroy(recordId, (err, record) => {
+        if (err) { console.error(err); return reject(err); }
+        return resolve(record)
+      })
+    })
   }
 }

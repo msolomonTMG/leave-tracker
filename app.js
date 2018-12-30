@@ -17,15 +17,37 @@ app.set('port', process.env.PORT || 3000)
 // create a new event
 app.post('/api/v1/events', async function(req, res) {
   console.log(req.body)
+  const newEvent = await airtable.createRecord('Dates', {
+    'Name': req.body.name,
+    'Date': req.body.date,
+    'End': req.body.end,
+    'Type': req.body.type,
+    'Person': [req.body.personId]
+  })
+  console.log(newEvent)
+  res.json(newEvent)
+})
+
+// delete an existing event
+app.post('/api/v1/events/delete/:airtableId', async function(req, res) {
+  const deletedRecord = await airtable.deleteRecord('Dates', req.params.airtableId)
+  res.send(deletedRecord)
 })
 
 // update an existing event
 app.post('/api/v1/events/:airtableId', async function(req, res) {
   console.log(req.body)
   console.log(req.params.airtableId)
-  let updatedRecord = await airtable.updateRecord('Dates', req.params.airtableId, {
-    'Date': req.body.date
-  })
+  let updateFields = {}
+  if (req.body.date) {
+    updateFields['Date'] = req.body.date
+  }
+  if (req.body.end) {
+    updateFields['End'] = req.body.end
+  }
+  console.log('updating event')
+  console.log(updateFields)
+  let updatedRecord = await airtable.updateRecord('Dates', req.params.airtableId, updateFields)
   res.send(updatedRecord)
 })
 
@@ -39,32 +61,10 @@ app.post('/form/v1/person/create', async function(req, res) {
     'Number of PTO Days': parseInt(req.body.daysOnPto),
     'Leave Start Date': req.body.leaveStartDate
   })
-  // create days for person
-  const numPflDays = 30
-  let i = 0
-  while (i < numPflDays) {
-    console.log(i)
-    // FMLA runs out in the last two weeks of PFL
-    let protection = 'FMLA'
-    if (i >= 20) {
-      protection = 'PFL'
-    }
-    
-    const newDate = await airtable.createRecord('Dates', {
-      'Name': `PFL${i+1}`,
-      'Type': 'PFL',
-      'Protection': protection,
-      'Person': [newPerson.id]
-    })
-
-    i++
-    
-    if (i === numPflDays) {
-      res.redirect(`/${newPerson.id}`)
-    }
-  }
+  res.redirect(`/${newPerson.id}`)
 })
 
+// update a person with a form to get redirected
 app.post('/form/v1/person/update', async function(req, res) {
   const updatedPerson = await airtable.updateRecord('People', req.body.personId, {
     'Name': req.body.personNanme,
@@ -74,6 +74,22 @@ app.post('/form/v1/person/update', async function(req, res) {
     'Leave Start Date': req.body.leaveStartDate
   })
   res.redirect(`/${req.body.personId}`)
+})
+
+// update a person via api
+app.post('/api/v1/person/:personId', async function(req, res) {
+  let updateFields = {}
+  if (req.body.date) {
+    updateFields['Leave Start Date'] = req.body.date
+  }
+  const updatedPerson = await airtable.updateRecord('People', req.params.personId, updateFields)
+  res.send(updatedPerson)
+})
+
+// get a person
+app.get('/api/v1/person/:personId', async function(req, res) {
+  const person = await airtable.getOneRecord('People', req.params.personId)
+  res.json(person)
 })
 
 app.get('/', async function(req, res) {
@@ -105,8 +121,10 @@ app.get('/:personId', async function(req, res) {
       personId: leaveDay.get('Person') ? leaveDay.get('Person')[0] : '',
       title: leaveDay.get('Name'),
       start: leaveDay.get('Date String'),
+      end: leaveDay.get('End'),
+      type: leaveDay.get('Type'),
       startEditable: true,
-      durationEditable: false,
+      durationEditable: true,
       color: '#05a3f2'
     }
     if (!leaveDay.get('Date String')) {
@@ -122,6 +140,7 @@ app.get('/:personId', async function(req, res) {
       airtableId: holiday.id,
       title: holiday.get('Name'),
       start: holiday.get('Date String'),
+      type: 'HOL',
       startEditable: false,
       durationEditable: false,
       color: '#D9D9D9'
@@ -139,6 +158,7 @@ app.get('/:personId', async function(req, res) {
         durationEditable: false,
         startEditable: true,
         personId: person.id,
+        type: 'STD',
         color: '#080f82',
         textColor: '#ffffff'
       }],
