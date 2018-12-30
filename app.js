@@ -21,6 +21,7 @@ app.post('/api/v1/events', async function(req, res) {
     'Name': req.body.name,
     'Date': req.body.date,
     'End': req.body.date,
+    'Type': req.body.type,
     'Person': [req.body.personId]
   })
   console.log(newEvent)
@@ -63,6 +64,7 @@ app.post('/form/v1/person/create', async function(req, res) {
   res.redirect(`/${newPerson.id}`)
 })
 
+// update a person
 app.post('/form/v1/person/update', async function(req, res) {
   const updatedPerson = await airtable.updateRecord('People', req.body.personId, {
     'Name': req.body.personNanme,
@@ -72,6 +74,12 @@ app.post('/form/v1/person/update', async function(req, res) {
     'Leave Start Date': req.body.leaveStartDate
   })
   res.redirect(`/${req.body.personId}`)
+})
+
+// get a person
+app.get('/api/v1/person/:personId', async function(req, res) {
+  const person = await airtable.getOneRecord('People', req.params.personId)
+  res.json(person)
 })
 
 app.get('/', async function(req, res) {
@@ -103,6 +111,7 @@ app.get('/:personId', async function(req, res) {
       personId: leaveDay.get('Person') ? leaveDay.get('Person')[0] : '',
       title: leaveDay.get('Name'),
       start: leaveDay.get('Date String'),
+      type: leaveDay.get('Type'),
       startEditable: true,
       durationEditable: true,
       color: '#05a3f2'
@@ -120,6 +129,7 @@ app.get('/:personId', async function(req, res) {
       airtableId: holiday.id,
       title: holiday.get('Name'),
       start: holiday.get('Date String'),
+      type: 'HOL',
       startEditable: false,
       durationEditable: false,
       color: '#D9D9D9'
@@ -137,6 +147,7 @@ app.get('/:personId', async function(req, res) {
         durationEditable: false,
         startEditable: true,
         personId: person.id,
+        type: 'STD',
         color: '#080f82',
         textColor: '#ffffff'
       }],

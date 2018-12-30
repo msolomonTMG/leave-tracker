@@ -13,6 +13,16 @@
       <p>
         <strong>Available Days Off</strong>
       </p>
+      <div id='paid-pfl-container'>
+        <div class='row'>
+          <div class='col-md-2'>
+            <span id='paid-pfl-counter'>({{person.fields.[Number of G9 Subsidized PFL Days Remaining]}})</span>
+          </div>
+          <div class='col-md-10' id='paid-pfl-events'>
+          </div>
+        </div>
+        
+      </div>
     </div>
   </div>
   <div class='col-md-9 bg-white text-dark rounded m-2 p-2 shadow-lg'>
@@ -118,6 +128,19 @@ function deleteEvent() {
       date: event.start,
       end: event.end
     })
+  }).then((response) => {
+    return response.json()
+  }).then((deletedRecord) => {
+    // get fresh information for counters
+    fetch(`${appUrl}/api/v1/person/${person.id}`, {
+      method: 'get'
+    }).then((response) => {
+      return response.json()
+    }).then((person) => {
+      console.log(person)
+      console.log(person.fields['Number of G9 Subsidized PFL Days Remaining'])
+      $('#paid-pfl-counter').text(`(${person.fields['Number of G9 Subsidized PFL Days Remaining']})`)
+    })
   })
 }
 
@@ -126,40 +149,20 @@ $(function() {
   // initialize the external events
   // -----------------------------------------------------------------
 
-  $('#external-events').append(`
+  //TODO: this should only be called if there are PFL days available
+  $('#paid-pfl-events').append(`
     <div class='unplanned-event mb-1 p-1'
          data-event='{
            "title":"Full Paycheck PFL",
            "personId":"${person.id}",
+           "type": "PFL",
            "stick":true,
            "color": "#05a3f2"
          }'
     >Full Paycheck PFL</div>
   `)
 
-  // put unplanned events into the external events section
-  unplannedEvents.forEach(unplannedEvent => {
-    console.log(unplannedEvent)
-    $('#external-events').append(`
-      <div class='unplanned-event mb-1 p-1'
-           data-event='{
-             "title":"${unplannedEvent.title}",
-             "airtableId":"${unplannedEvent.airtableId}",
-             "personId":"${unplannedEvent.personId}",
-             "stick":true,
-             "color": "#05a3f2"
-           }'
-      >${unplannedEvent.title}</div>
-    `)
-  })
-
   $('#external-events .unplanned-event').each(function() {
-
-    // // store data so the calendar knows to render an event upon drop
-    // $(this).data('event', {
-    //   title: $.trim($(this).text()), // use the element's text as the event title
-    //   stick: true // maintain when user navigates (see docs on the renderEvent method)
-    // });
 
     // make the event draggable using jQuery UI
     $(this).draggable({
@@ -222,9 +225,11 @@ $(function() {
     eventClick (event, jsEvent, view) {
       console.log('EVENT CLICK')
       console.log(event)
-      $('#delete-event-airtable-id').val(event.airtableId)
-      $('#delete-event-full-calendar-id').val(event._id)
-      $('#deleteEventModal').modal()
+      if (event.type === 'PFL' || event.type === 'PTO') {
+        $('#delete-event-airtable-id').val(event.airtableId)
+        $('#delete-event-full-calendar-id').val(event._id)
+        $('#deleteEventModal').modal()
+      }
     },
     // someone drags an unplanned event onto the calendar
     eventReceive (event) {
@@ -237,6 +242,7 @@ $(function() {
         body: JSON.stringify({
           date: event.start,
           personId: event.personId,
+          type: event.type,
           name: event.title
         })
       }).then((response) => {
@@ -244,6 +250,7 @@ $(function() {
       }).then((newEvent) => {
         event.airtableId = newEvent.id
         $('#calendar').fullCalendar('updateEvent', event)
+        $('#paid-pfl-counter').text(`(${newEvent.fields['Number of G9 Subsidized PFL Days Remaining'][0]})`)
       })
     },
     events: eventsOnCalendar
