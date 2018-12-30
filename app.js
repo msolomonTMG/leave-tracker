@@ -20,7 +20,7 @@ app.post('/api/v1/events', async function(req, res) {
   const newEvent = await airtable.createRecord('Dates', {
     'Name': req.body.name,
     'Date': req.body.date,
-    'End': req.body.date,
+    'End': req.body.end,
     'Type': req.body.type,
     'Person': [req.body.personId]
   })
@@ -111,6 +111,7 @@ app.get('/:personId', async function(req, res) {
       personId: leaveDay.get('Person') ? leaveDay.get('Person')[0] : '',
       title: leaveDay.get('Name'),
       start: leaveDay.get('Date String'),
+      end: leaveDay.get('End'),
       type: leaveDay.get('Type'),
       startEditable: true,
       durationEditable: true,

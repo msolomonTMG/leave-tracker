@@ -144,6 +144,11 @@ function deleteEvent() {
   })
 }
 
+function shaveOneMinuteOff(time) {
+  const MS_PER_MINUTE = 60000
+  return new Date(time - 1 * MS_PER_MINUTE)
+}
+
 $(function() {
 
   // initialize the external events
@@ -156,6 +161,7 @@ $(function() {
            "title":"Full Paycheck PFL",
            "personId":"${person.id}",
            "type": "PFL",
+           "allDay":true,
            "stick":true,
            "color": "#05a3f2"
          }'
@@ -182,6 +188,7 @@ $(function() {
       center: 'title',
       right: 'month,agendaWeek,agendaDay'
     },
+    forceEventDuration: true,
     weekends: false,
     editable: true,
     droppable: true, // this allows things to be dropped onto the calendar
@@ -219,6 +226,7 @@ $(function() {
       }).then((newEvent) => {
         event.airtableId = newEvent.id
         $('#calendar').fullCalendar('updateEvent', event)
+        $('#paid-pfl-counter').text(`(${newEvent.fields['Number of G9 Subsidized PFL Days Remaining'][0]})`)
       })
     },
     // someone clicked on an event
@@ -234,6 +242,9 @@ $(function() {
     // someone drags an unplanned event onto the calendar
     eventReceive (event) {
       console.log('EVENT RECEIVE', event)
+      // event.end = shaveOneMinuteOff(event.end)
+      // $('#calendar').fullCalendar('updateEvent', event)
+      
       fetch(`${appUrl}/api/v1/events`, {
         method: 'post',
         headers: {
@@ -241,6 +252,7 @@ $(function() {
         },
         body: JSON.stringify({
           date: event.start,
+          end: event.end,
           personId: event.personId,
           type: event.type,
           name: event.title
