@@ -198,16 +198,30 @@ $(function() {
     // someone changes an events start
     eventDrop (event, delta, revertFunc, jsEvent, ui, view) {
       console.log('EVENT DROP', event)
-      fetch(`${appUrl}/api/v1/events/${event.airtableId}`, {
-        method: 'post',
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          date: event.start,
-          end: event.end
+      if (event.type === 'STD') {
+        // if STD, change leave date start on the person
+        fetch(`${appUrl}/api/v1/person/${event.personId}`, {
+          method: 'post',
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            date: event.start
+          })
         })
-      })
+      } else {
+        // if other type, change the event
+        fetch(`${appUrl}/api/v1/events/${event.airtableId}`, {
+          method: 'post',
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            date: event.start,
+            end: event.end
+          })
+        })
+      }
     },
     // someone changed the duration of the event
     eventResize (event, delta, revertFunc, jsEvent, ui, view) {

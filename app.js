@@ -64,7 +64,7 @@ app.post('/form/v1/person/create', async function(req, res) {
   res.redirect(`/${newPerson.id}`)
 })
 
-// update a person
+// update a person with a form to get redirected
 app.post('/form/v1/person/update', async function(req, res) {
   const updatedPerson = await airtable.updateRecord('People', req.body.personId, {
     'Name': req.body.personNanme,
@@ -74,6 +74,16 @@ app.post('/form/v1/person/update', async function(req, res) {
     'Leave Start Date': req.body.leaveStartDate
   })
   res.redirect(`/${req.body.personId}`)
+})
+
+// update a person via api
+app.post('/api/v1/person/:personId', async function(req, res) {
+  let updateFields = {}
+  if (req.body.date) {
+    updateFields['Leave Start Date'] = req.body.date
+  }
+  const updatedPerson = await airtable.updateRecord('People', req.params.personId, updateFields)
+  res.send(updatedPerson)
 })
 
 // get a person
