@@ -164,7 +164,10 @@ app.get('/api/v1/person/all/:uid', async function(req, res) {
 })
 
 app.get('/', async function(req, res) {
-  res.render('dashboard')
+  const error = req.query.error
+  res.render('dashboard', {
+    error: error
+  })
 })
 
 app.get('/:personId', async function(req, res) {

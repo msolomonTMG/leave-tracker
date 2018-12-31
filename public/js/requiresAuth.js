@@ -21,8 +21,10 @@ firebase.auth().onAuthStateChanged(function(authedUser) {
       authedUser.airtable = airtableUserRecord
       user = authedUser
       
-      // run the page's init function
-      init() 
+      // run the page's init function once the document is ready
+      $(document).ready(function() {
+        init() 
+      })
     })
   } else {
     // User is signed out, kick them to the signin page

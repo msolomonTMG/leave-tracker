@@ -7,6 +7,14 @@
 </div>
 <div class='row'>
   <div class='col-md-6 offset-md-3 bg-white text-dark rounded shadow-lg p-2'>
+    {{#if error}}
+      <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <strong>Holy guacamole!</strong> {{error}}.
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+    {{/if}}
     <h3>People
       <span class='float-right'>
         <small>
