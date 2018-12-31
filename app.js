@@ -144,11 +144,21 @@ app.get('/api/v1/person/all/:uid', async function(req, res) {
     // we couldnt find an airtable user that matched provided uid
     res.json(null)
   } else {
-    const people = await airtable.getRecordsFromView('People', {
-      view: 'All People',
-      filterByFormula: `IF(FIND("${req.params.uid}", {Users})>=1, TRUE(), FALSE())`,
-      sort: [{field: 'Name', direction: 'asc'}]
-    })
+    let people = []
+    if (user[0].get('Admin')) {
+      // if this user is an admin, they can see all people
+      people = await airtable.getRecordsFromView('People', {
+        view: 'All People',
+        sort: [{field: 'Name', direction: 'asc'}]
+      })
+    } else {
+      // otherwise, only show people that they can see
+      people = await airtable.getRecordsFromView('People', {
+        view: 'All People',
+        filterByFormula: `IF(FIND("${req.params.uid}", {Users})>=1, TRUE(), FALSE())`,
+        sort: [{field: 'Name', direction: 'asc'}]
+      })
+    }
     res.json(people)
   }
 })
