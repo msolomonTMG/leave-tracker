@@ -3,13 +3,10 @@ provider.addScope('https://www.googleapis.com/auth/userinfo.profile');
 
 function signIn() {
   firebase.auth().signInWithPopup(provider).then(function(result) {
-    // This gives you a Google Access Token. You can use it to access the Google API.
-    var token = result.credential.accessToken;
     // The signed-in user info.
-    var user = result.user;
-    console.log(result.user)
-    console.log(isValidEmail(result.user.email))
-    if (!isValidEmail(result.user.email)) {
+    const user = result.user;
+    console.log(isValidEmail(user.email))
+    if (!isValidEmail(user.email)) {
       // not a valid user, sign them out and send them to login
       firebase.auth().signOut().then(function() {
         console.log('Signed Out');
@@ -19,8 +16,24 @@ function signIn() {
         console.error('Sign Out Error', error);
       });
     } else {
-      // valid user, proceed
-      window.location.href = '/'
+      // valid user, proceed to store them in airtable
+      fetch(`/api/v1/users`, {
+        method: 'post',
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          name: user.displayName,
+          email: user.email,
+          uid: user.uid
+        })
+      }).then((response) => {
+        return response.json()
+      }).then((userRecord) => {
+        // redirect them to the homepage
+        window.location.href = '/'
+      })
+      
     }
     // ...
   }).catch(function(error) {

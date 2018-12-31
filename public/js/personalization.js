@@ -1,4 +1,5 @@
 firebase.auth().onAuthStateChanged(function(user) {
+  console.log(user)
   let displayName = 'no name'
   let email = 'no email'
   let photoUrl = 'https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png'

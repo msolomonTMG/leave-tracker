@@ -27,6 +27,16 @@ app.get('/signout', async function(req, res) {
   res.render('signout')
 })
 
+// create a new user in airtable
+app.post('/api/v1/users', async function(req, res) {
+  const newUser = await airtable.createRecord('Users', {
+    'ID': req.body.uid,
+    'Email': req.body.email,
+    'Name': req.body.name
+  })
+  res.json(newUser)
+})
+
 // create a new event
 app.post('/api/v1/events', async function(req, res) {
   console.log(req.body)
