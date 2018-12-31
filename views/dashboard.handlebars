@@ -32,6 +32,7 @@
         </button>
       </div>
       <form action="/form/v1/person/create" method="post">
+        <input type="hidden" class="form-control" name="userAirtableId" id="user-airtable-id">
         <div class="modal-body">
           <div class="form-group">
             <label for="person-name" class="col-form-label">name</label>
@@ -70,15 +71,20 @@
 
 <script>
   async function init () {
+    // set the new person form to use this user's uid
+    // this way, when a new person gets created, this user will be attached
+    $('#user-airtable-id').val(`${user.airtable.id}`)
     // initialize list of people
     fetch(`/api/v1/person/all/${user.uid}`, {
       method: 'get'
     }).then((response) => {
       return response.json()
     }).then((people) => {
-      console.log(people)
-      for (const person of people) {
-        $('#people-list').append(`<li><a href="/${person.id}">${person.fields.Name}</a></li>`)
+      if (people) {
+        console.log(people)
+        for (const person of people) {
+          $('#people-list').append(`<li><a href="/${person.id}">${person.fields.Name}</a></li>`)
+        }
       }
     })
   }

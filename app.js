@@ -91,12 +91,14 @@ app.post('/api/v1/events/:airtableId', async function(req, res) {
 // create a new person
 app.post('/form/v1/person/create', async function(req, res) {
   // create person
+  console.log(req.body)
   const newPerson = await airtable.createRecord('People', {
     'Name': req.body.personName,
     'Annual Salary': parseInt(req.body.annualSalary),
     'Number of Short Term Disability Days': parseInt(req.body.daysOnStd),
     'Number of PTO Days': parseInt(req.body.daysOnPto),
-    'Leave Start Date': req.body.leaveStartDate
+    'Leave Start Date': req.body.leaveStartDate,
+    'Users': [req.body.userAirtableId]
   })
   res.redirect(`/${newPerson.id}`)
 })
@@ -131,8 +133,7 @@ app.get('/api/v1/person/:personId', async function(req, res) {
 
 // get all available people for this user
 // based on if their airtable user is linked to the person record
-// get all available people for this user
-// based on if their airtable user is linked to the person record
+// uid param is the firebase user id
 app.get('/api/v1/person/all/:uid', async function(req, res) {
   const user = await airtable.getRecordsFromView('Users', {
     view: 'All Users',
