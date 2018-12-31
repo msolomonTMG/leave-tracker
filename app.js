@@ -30,11 +30,25 @@ app.get('/signout', async function(req, res) {
 // create a new user in airtable
 app.post('/api/v1/users', async function(req, res) {
   const newUser = await airtable.createRecord('Users', {
-    'ID': req.body.uid,
+    'UID': req.body.uid,
     'Email': req.body.email,
     'Name': req.body.name
   })
   res.json(newUser)
+})
+
+// get a user from airtable via firebase uid
+app.get('/api/v1/user/getByFirebaseUid/:uid', async function(req, res) {
+  const existingUser = await airtable.getRecordsFromView('Users', {
+    view: 'All Users',
+    filterByFormula: `IF({UID} = "${req.params.uid}", TRUE(), FALSE())`,
+    maxRecords: 1
+  })
+  if (existingUser.length === 0) {
+    res.json(null)
+  } else {
+    res.json(existingUser[0])
+  }
 })
 
 // create a new event
