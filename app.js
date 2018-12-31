@@ -129,14 +129,31 @@ app.get('/api/v1/person/:personId', async function(req, res) {
   res.json(person)
 })
 
+// get all available people for this user
+// based on if their airtable user is linked to the person record
+// get all available people for this user
+// based on if their airtable user is linked to the person record
+app.get('/api/v1/person/all/:uid', async function(req, res) {
+  const user = await airtable.getRecordsFromView('Users', {
+    view: 'All Users',
+    filterByFormula: `IF({UID} = "${req.params.uid}", TRUE(), FALSE())`,
+    maxRecords: 1
+  })
+  if (user.length === 0) {
+    // we couldnt find an airtable user that matched provided uid
+    res.json(null)
+  } else {
+    const people = await airtable.getRecordsFromView('People', {
+      view: 'All People',
+      filterByFormula: `IF(FIND("${req.params.uid}", {Users})>=1, TRUE(), FALSE())`,
+      sort: [{field: 'Name', direction: 'asc'}]
+    })
+    res.json(people)
+  }
+})
+
 app.get('/', async function(req, res) {
-  const people = await airtable.getRecordsFromView('People', {
-    view: 'All People',
-    sort: [{field: 'Name', direction: 'asc'}]
-  })
-  res.render('dashboard', {
-    people: people
-  })
+  res.render('dashboard')
 })
 
 app.get('/:personId', async function(req, res) {
