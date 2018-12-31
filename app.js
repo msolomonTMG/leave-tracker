@@ -14,6 +14,19 @@ app.use(bodyParser.json())
 app.use(express.static(__dirname + '/public'));
 app.set('port', process.env.PORT || 3000)
 
+// signin page
+app.get('/signin', async function(req, res) {
+  const error = req.query.error
+  res.render('signin', {
+    error: error
+  })
+})
+
+// signout page
+app.get('/signout', async function(req, res) {
+  res.render('signout')
+})
+
 // create a new event
 app.post('/api/v1/events', async function(req, res) {
   console.log(req.body)
