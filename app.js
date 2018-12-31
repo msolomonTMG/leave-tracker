@@ -14,6 +14,43 @@ app.use(bodyParser.json())
 app.use(express.static(__dirname + '/public'));
 app.set('port', process.env.PORT || 3000)
 
+// signin page
+app.get('/signin', async function(req, res) {
+  const error = req.query.error
+  res.render('signin', {
+    error: error
+  })
+})
+
+// signout page
+app.get('/signout', async function(req, res) {
+  res.render('signout')
+})
+
+// create a new user in airtable
+app.post('/api/v1/users', async function(req, res) {
+  const newUser = await airtable.createRecord('Users', {
+    'UID': req.body.uid,
+    'Email': req.body.email,
+    'Name': req.body.name
+  })
+  res.json(newUser)
+})
+
+// get a user from airtable via firebase uid
+app.get('/api/v1/user/getByFirebaseUid/:uid', async function(req, res) {
+  const existingUser = await airtable.getRecordsFromView('Users', {
+    view: 'All Users',
+    filterByFormula: `IF({UID} = "${req.params.uid}", TRUE(), FALSE())`,
+    maxRecords: 1
+  })
+  if (existingUser.length === 0) {
+    res.json(null)
+  } else {
+    res.json(existingUser[0])
+  }
+})
+
 // create a new event
 app.post('/api/v1/events', async function(req, res) {
   console.log(req.body)
@@ -54,12 +91,14 @@ app.post('/api/v1/events/:airtableId', async function(req, res) {
 // create a new person
 app.post('/form/v1/person/create', async function(req, res) {
   // create person
+  console.log(req.body)
   const newPerson = await airtable.createRecord('People', {
     'Name': req.body.personName,
     'Annual Salary': parseInt(req.body.annualSalary),
     'Number of Short Term Disability Days': parseInt(req.body.daysOnStd),
     'Number of PTO Days': parseInt(req.body.daysOnPto),
-    'Leave Start Date': req.body.leaveStartDate
+    'Leave Start Date': req.body.leaveStartDate,
+    'Users': [req.body.userAirtableId]
   })
   res.redirect(`/${newPerson.id}`)
 })
@@ -92,13 +131,42 @@ app.get('/api/v1/person/:personId', async function(req, res) {
   res.json(person)
 })
 
-app.get('/', async function(req, res) {
-  const people = await airtable.getRecordsFromView('People', {
-    view: 'All People',
-    sort: [{field: 'Name', direction: 'asc'}]
+// get all available people for this user
+// based on if their airtable user is linked to the person record
+// uid param is the firebase user id
+app.get('/api/v1/person/all/:uid', async function(req, res) {
+  const user = await airtable.getRecordsFromView('Users', {
+    view: 'All Users',
+    filterByFormula: `IF({UID} = "${req.params.uid}", TRUE(), FALSE())`,
+    maxRecords: 1
   })
+  if (user.length === 0) {
+    // we couldnt find an airtable user that matched provided uid
+    res.json(null)
+  } else {
+    let people = []
+    if (user[0].get('Admin')) {
+      // if this user is an admin, they can see all people
+      people = await airtable.getRecordsFromView('People', {
+        view: 'All People',
+        sort: [{field: 'Name', direction: 'asc'}]
+      })
+    } else {
+      // otherwise, only show people that they can see
+      people = await airtable.getRecordsFromView('People', {
+        view: 'All People',
+        filterByFormula: `IF(FIND("${req.params.uid}", {Users})>=1, TRUE(), FALSE())`,
+        sort: [{field: 'Name', direction: 'asc'}]
+      })
+    }
+    res.json(people)
+  }
+})
+
+app.get('/', async function(req, res) {
+  const error = req.query.error
   res.render('dashboard', {
-    people: people
+    error: error
   })
 })
 

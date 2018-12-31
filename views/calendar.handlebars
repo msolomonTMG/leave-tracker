@@ -1,3 +1,4 @@
+<script src='js/requiresAuth.js'></script>
 <div class='row'>
   <div class='col-md-2 bg-white text-dark rounded m-2 p-2 shadow-lg align-middle'>
     <h4>Leave Tracker</h4>
@@ -149,68 +150,124 @@ function shaveOneMinuteOff(time) {
   return new Date(time - 1 * MS_PER_MINUTE)
 }
 
-$(function() {
+function isPageAccessible(user) {
+  return new Promise((resolve, reject) => {
+    let isAccessible = 0 // default to not accessible
+    
+    fetch(`/api/v1/person/all/${user.uid}`, {
+      method: 'get'
+    }).then((response) => {
+      return response.json()
+    }).then((accessiblePeople) => {
+      if (!accessiblePeople) {
+        return resolve(isAccessible)
+      } else {
+        for (const accessiblePerson of accessiblePeople) {
+          // if the accessible person's id is in the url, this page is ok
+          if (window.location.href.includes(accessiblePerson.id)) {
+            isAccessible = 1
+            return resolve(isAccessible)
+          }
+        }
+        return resolve(isAccessible)
+      }
+    })
+  })
+}
 
-  // initialize the external events
-  // -----------------------------------------------------------------
+function init() {
+  const isAllowedOnPage = isPageAccessible(user)
 
-  //TODO: this should only be called if there are PFL days available
-  $('#paid-pfl-events').append(`
-    <div class='unplanned-event mb-1 p-1'
-         data-event='{
-           "title":"Full Paycheck PFL",
-           "personId":"${person.id}",
-           "type": "PFL",
-           "allDay":true,
-           "stick":true,
-           "color": "#05a3f2"
-         }'
-    >Full Paycheck PFL</div>
-  `)
+  Promise.all([isAllowedOnPage])
+    .then(values => {
+      let isAllowedOnPage = values[0]
+      if (isAllowedOnPage) {
+        buildCalendar()
+      } else {
+        const error = 'You are not permitted to access that page. Contact People Ops for assistance if needed.'
+        window.location.href = `/?error=${error}`
+      }
+    })
+}
 
-  $('#external-events .unplanned-event').each(function() {
+function buildCalendar() {
+  $(function() {
 
-    // make the event draggable using jQuery UI
-    $(this).draggable({
-      zIndex: 999,
-      revert: true,      // will cause the event to go back to its
-      revertDuration: 0  //  original position after the drag
+    // initialize the external events
+    // -----------------------------------------------------------------
+
+    //TODO: this should only be called if there are PFL days available
+    $('#paid-pfl-events').append(`
+      <div class='unplanned-event mb-1 p-1'
+           data-event='{
+             "title":"Full Paycheck PFL",
+             "personId":"${person.id}",
+             "type": "PFL",
+             "allDay":true,
+             "stick":true,
+             "color": "#05a3f2"
+           }'
+      >Full Paycheck PFL</div>
+    `)
+
+    $('#external-events .unplanned-event').each(function() {
+
+      // make the event draggable using jQuery UI
+      $(this).draggable({
+        zIndex: 999,
+        revert: true,      // will cause the event to go back to its
+        revertDuration: 0  //  original position after the drag
+      });
+
     });
 
-  });
+    // initialize the calendar
+    // -----------------------------------------------------------------
 
-  // initialize the calendar
-  // -----------------------------------------------------------------
-
-  $('#calendar').fullCalendar({
-    header: {
-      left: 'prev,next today',
-      center: 'title',
-      right: 'month,agendaWeek,agendaDay'
-    },
-    forceEventDuration: true,
-    weekends: false,
-    editable: true,
-    droppable: true, // this allows things to be dropped onto the calendar
-    drop (date, jsEvent, ui, resourceId) {
-      //$(this).remove();
-    },
-    // someone changes an events start
-    eventDrop (event, delta, revertFunc, jsEvent, ui, view) {
-      console.log('EVENT DROP', event)
-      if (event.type === 'STD') {
-        // if STD, change leave date start on the person
-        fetch(`${appUrl}/api/v1/person/${event.personId}`, {
-          method: 'post',
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            date: event.start
+    $('#calendar').fullCalendar({
+      header: {
+        left: 'prev,next today',
+        center: 'title',
+        right: 'month,agendaWeek,agendaDay'
+      },
+      forceEventDuration: true,
+      weekends: false,
+      editable: true,
+      droppable: true, // this allows things to be dropped onto the calendar
+      drop (date, jsEvent, ui, resourceId) {
+        //$(this).remove();
+      },
+      // someone changes an events start
+      eventDrop (event, delta, revertFunc, jsEvent, ui, view) {
+        console.log('EVENT DROP', event)
+        if (event.type === 'STD') {
+          // if STD, change leave date start on the person
+          fetch(`${appUrl}/api/v1/person/${event.personId}`, {
+            method: 'post',
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              date: event.start
+            })
           })
-        })
-      } else {
-        // if other type, change the event
+        } else {
+          // if other type, change the event
+          fetch(`${appUrl}/api/v1/events/${event.airtableId}`, {
+            method: 'post',
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              date: event.start,
+              end: event.end
+            })
+          })
+        }
+      },
+      // someone changed the duration of the event
+      eventResize (event, delta, revertFunc, jsEvent, ui, view) {
+        console.log('EVENT RESIZE', event)
         fetch(`${appUrl}/api/v1/events/${event.airtableId}`, {
           method: 'post',
           headers: {
@@ -220,67 +277,53 @@ $(function() {
             date: event.start,
             end: event.end
           })
+        }).then((response) => {
+          return response.json()
+        }).then((newEvent) => {
+          event.airtableId = newEvent.id
+          $('#calendar').fullCalendar('updateEvent', event)
+          $('#paid-pfl-counter').text(`(${newEvent.fields['Number of G9 Subsidized PFL Days Remaining'][0]})`)
         })
-      }
-    },
-    // someone changed the duration of the event
-    eventResize (event, delta, revertFunc, jsEvent, ui, view) {
-      console.log('EVENT RESIZE', event)
-      fetch(`${appUrl}/api/v1/events/${event.airtableId}`, {
-        method: 'post',
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          date: event.start,
-          end: event.end
+      },
+      // someone clicked on an event
+      eventClick (event, jsEvent, view) {
+        console.log('EVENT CLICK')
+        console.log(event)
+        if (event.type === 'PFL' || event.type === 'PTO') {
+          $('#delete-event-airtable-id').val(event.airtableId)
+          $('#delete-event-full-calendar-id').val(event._id)
+          $('#deleteEventModal').modal()
+        }
+      },
+      // someone drags an unplanned event onto the calendar
+      eventReceive (event) {
+        console.log('EVENT RECEIVE', event)
+        // event.end = shaveOneMinuteOff(event.end)
+        // $('#calendar').fullCalendar('updateEvent', event)
+        
+        fetch(`${appUrl}/api/v1/events`, {
+          method: 'post',
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            date: event.start,
+            end: event.end,
+            personId: event.personId,
+            type: event.type,
+            name: event.title
+          })
+        }).then((response) => {
+          return response.json()
+        }).then((newEvent) => {
+          event.airtableId = newEvent.id
+          $('#calendar').fullCalendar('updateEvent', event)
+          $('#paid-pfl-counter').text(`(${newEvent.fields['Number of G9 Subsidized PFL Days Remaining'][0]})`)
         })
-      }).then((response) => {
-        return response.json()
-      }).then((newEvent) => {
-        event.airtableId = newEvent.id
-        $('#calendar').fullCalendar('updateEvent', event)
-        $('#paid-pfl-counter').text(`(${newEvent.fields['Number of G9 Subsidized PFL Days Remaining'][0]})`)
-      })
-    },
-    // someone clicked on an event
-    eventClick (event, jsEvent, view) {
-      console.log('EVENT CLICK')
-      console.log(event)
-      if (event.type === 'PFL' || event.type === 'PTO') {
-        $('#delete-event-airtable-id').val(event.airtableId)
-        $('#delete-event-full-calendar-id').val(event._id)
-        $('#deleteEventModal').modal()
-      }
-    },
-    // someone drags an unplanned event onto the calendar
-    eventReceive (event) {
-      console.log('EVENT RECEIVE', event)
-      // event.end = shaveOneMinuteOff(event.end)
-      // $('#calendar').fullCalendar('updateEvent', event)
-      
-      fetch(`${appUrl}/api/v1/events`, {
-        method: 'post',
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          date: event.start,
-          end: event.end,
-          personId: event.personId,
-          type: event.type,
-          name: event.title
-        })
-      }).then((response) => {
-        return response.json()
-      }).then((newEvent) => {
-        event.airtableId = newEvent.id
-        $('#calendar').fullCalendar('updateEvent', event)
-        $('#paid-pfl-counter').text(`(${newEvent.fields['Number of G9 Subsidized PFL Days Remaining'][0]})`)
-      })
-    },
-    events: eventsOnCalendar
-  });
+      },
+      events: eventsOnCalendar
+    });
 
-});
+  });
+}
 </script>
