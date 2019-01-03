@@ -59,6 +59,7 @@ app.post('/api/v1/events', async function(req, res) {
     'Date': req.body.date,
     'End': req.body.end,
     'Type': req.body.type,
+    'Protection': req.body.protection,
     'Person': [req.body.personId]
   })
   console.log(newEvent)

@@ -22,7 +22,15 @@
           <div class='col-md-10' id='paid-pfl-events'>
           </div>
         </div>
-        
+      </div>
+      <div id='non-paid-pfl-container'>
+        <div class='row'>
+          <div class='col-md-2'>
+            <span id='non-paid-pfl-counter'>({{person.fields.[Number of G9 Subsidized PFL Days Remaining]}})</span>
+          </div>
+          <div class='col-md-10' id='non-paid-pfl-events'>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -198,16 +206,31 @@ function buildCalendar() {
 
     //TODO: this should only be called if there are PFL days available
     $('#paid-pfl-events').append(`
-      <div class='unplanned-event mb-1 p-1'
+      <div class='unplanned-event paid-pfl mb-1 p-1'
            data-event='{
              "title":"Full Paycheck PFL",
              "personId":"${person.id}",
              "type": "PFL",
+             "protection": "FMLA",
              "allDay":true,
              "stick":true,
              "color": "#05a3f2"
            }'
       >Full Paycheck PFL</div>
+    `)
+    //TODO: this should only be called if there are non PFL days avaialble
+    $('#non-paid-pfl-events').append(`
+      <div class='unplanned-event non-paid-pfl mb-1 p-1'
+           data-event='{
+             "title":"Not Full Paycheck PFL",
+             "personId":"${person.id}",
+             "type": "PFL",
+             "protection": "PFL",
+             "allDay":true,
+             "stick":true,
+             "color": "#fd82b9"
+           }'
+      >Not Full Paycheck PFL</div>
     `)
 
     $('#external-events .unplanned-event').each(function() {
@@ -310,6 +333,7 @@ function buildCalendar() {
             date: event.start,
             end: event.end,
             personId: event.personId,
+            protection: event.protection,
             type: event.type,
             name: event.title
           })
