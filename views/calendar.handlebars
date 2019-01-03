@@ -26,7 +26,7 @@
       <div id='non-paid-pfl-container'>
         <div class='row'>
           <div class='col-md-2'>
-            <span id='non-paid-pfl-counter'>({{person.fields.[Number of G9 Subsidized PFL Days Remaining]}})</span>
+            <span id='non-paid-pfl-counter'>({{person.fields.[Number of Non-Subsidized PFL Days Remaining]}})</span>
           </div>
           <div class='col-md-10' id='non-paid-pfl-events'>
           </div>
@@ -149,6 +149,7 @@ function deleteEvent() {
       console.log(person)
       console.log(person.fields['Number of G9 Subsidized PFL Days Remaining'])
       $('#paid-pfl-counter').text(`(${person.fields['Number of G9 Subsidized PFL Days Remaining']})`)
+      $('#non-paid-pfl-counter').text(`(${person.fields['Number of Non-Subsidized PFL Days Remaining']})`)
     })
   })
 }
@@ -306,6 +307,7 @@ function buildCalendar() {
           event.airtableId = newEvent.id
           $('#calendar').fullCalendar('updateEvent', event)
           $('#paid-pfl-counter').text(`(${newEvent.fields['Number of G9 Subsidized PFL Days Remaining'][0]})`)
+          $('#non-paid-pfl-counter').text(`(${newEvent.fields['Number of Non-Subsidized PFL Days Remaining'][0]})`)
         })
       },
       // someone clicked on an event
@@ -343,6 +345,7 @@ function buildCalendar() {
           event.airtableId = newEvent.id
           $('#calendar').fullCalendar('updateEvent', event)
           $('#paid-pfl-counter').text(`(${newEvent.fields['Number of G9 Subsidized PFL Days Remaining'][0]})`)
+          $('#non-paid-pfl-counter').text(`(${newEvent.fields['Number of Non-Subsidized PFL Days Remaining'][0]})`)
         })
       },
       events: eventsOnCalendar
