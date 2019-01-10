@@ -59,6 +59,7 @@ app.post('/api/v1/events', async function(req, res) {
     'Date': req.body.date,
     'End': req.body.end,
     'Type': req.body.type,
+    'Protection': req.body.protection,
     'Person': [req.body.personId]
   })
   console.log(newEvent)
@@ -184,7 +185,7 @@ app.get('/:personId', async function(req, res) {
   let formattedHolidays = []
   // assemble available days to planned v unplanned
   for (const leaveDay of airtableLeaveDays) {
-    const newEvent = {
+    let newEvent = {
       airtableId: leaveDay.id,
       personId: leaveDay.get('Person') ? leaveDay.get('Person')[0] : '',
       title: leaveDay.get('Name'),
@@ -192,9 +193,17 @@ app.get('/:personId', async function(req, res) {
       end: leaveDay.get('End'),
       type: leaveDay.get('Type'),
       startEditable: true,
-      durationEditable: true,
-      color: '#05a3f2'
+      durationEditable: true
     }
+    // color the event based on the type of protection
+    if (leaveDay.get('Protection') === 'FMLA') {
+      newEvent.color = '#05a3f2'
+    } else if (leaveDay.get('Protection') === 'PFL') {
+      newEvent.color = '#fd82b9'
+    } else {
+      newEvent.color = '#eedd00'
+    }
+    
     if (!leaveDay.get('Date String')) {
       unplannedEvents.push(newEvent)
     } else {
