@@ -233,6 +233,20 @@ function buildCalendar() {
            }'
       >Not Full Paycheck PFL</div>
     `)
+    //TODO: this should only be called if there are PTO hours avaialble
+    $('#non-paid-pfl-events').append(`
+      <div class='unplanned-event pto-hour mb-1 p-1'
+           data-event='{
+             "title":"PTO Hour",
+             "personId":"${person.id}",
+             "type": "PTO",
+             "protection": "PTO",
+             "allDay":true,
+             "stick":true,
+             "color": "#eedd00"
+           }'
+      >PTO Hour</div>
+    `)
 
     $('#external-events .unplanned-event').each(function() {
 
