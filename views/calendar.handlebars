@@ -32,6 +32,15 @@
           </div>
         </div>
       </div>
+      <div id='pto-hour-container'>
+        <div class='row'>
+          <div class='col-md-2'>
+            <span id='pto-hour-counter'>({{person.fields.[Number of PTO Hours Remaining]}})</span>
+          </div>
+          <div class='col-md-10' id='pto-hour-events'>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
   <div class='col-md-9 bg-white text-dark rounded m-2 p-2 shadow-lg'>
@@ -150,6 +159,7 @@ function deleteEvent() {
       console.log(person.fields['Number of G9 Subsidized PFL Days Remaining'])
       $('#paid-pfl-counter').text(`(${person.fields['Number of G9 Subsidized PFL Days Remaining']})`)
       $('#non-paid-pfl-counter').text(`(${person.fields['Number of Non-Subsidized PFL Days Remaining']})`)
+      $('#pto-hour-counter').text(`(${person.fields['Number of PTO Hours Remaining']})`)
     })
   })
 }
@@ -233,6 +243,21 @@ function buildCalendar() {
            }'
       >Not Full Paycheck PFL</div>
     `)
+    //TODO: this should only be called if there are PTO hours avaialble
+    $('#pto-hour-events').append(`
+      <div class='unplanned-event pto-hour mb-1 p-1'
+           data-event='{
+             "title":"PTO Hour",
+             "personId":"${person.id}",
+             "type": "PTO",
+             "protection": "PTO",
+             "allDay":true,
+             "stick":true,
+             "durationEditable":false,
+             "color": "#eedd00"
+           }'
+      >PTO Hour</div>
+    `)
 
     $('#external-events .unplanned-event').each(function() {
 
@@ -308,6 +333,7 @@ function buildCalendar() {
           $('#calendar').fullCalendar('updateEvent', event)
           $('#paid-pfl-counter').text(`(${newEvent.fields['Number of G9 Subsidized PFL Days Remaining'][0]})`)
           $('#non-paid-pfl-counter').text(`(${newEvent.fields['Number of Non-Subsidized PFL Days Remaining'][0]})`)
+          $('#pto-hour-counter').text(`(${newEvent.fields['Number of PTO Hours Remaining'][0]})`)
         })
       },
       // someone clicked on an event
@@ -346,6 +372,7 @@ function buildCalendar() {
           $('#calendar').fullCalendar('updateEvent', event)
           $('#paid-pfl-counter').text(`(${newEvent.fields['Number of G9 Subsidized PFL Days Remaining'][0]})`)
           $('#non-paid-pfl-counter').text(`(${newEvent.fields['Number of Non-Subsidized PFL Days Remaining'][0]})`)
+          $('#pto-hour-counter').text(`(${newEvent.fields['Number of PTO Hours Remaining'][0]})`)
         })
       },
       events: eventsOnCalendar
